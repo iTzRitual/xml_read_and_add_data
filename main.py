@@ -1,9 +1,8 @@
 import xml.etree.ElementTree as ET
 import os
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import filedialog
 
-TO_IMPORT = 'import_xml'
 TO_EXPORT = 'export_xml'
 
 def dodaj_atrybuty_wymiarow(offer):
@@ -34,6 +33,10 @@ def dodaj_atrybuty_wymiarow(offer):
 
             srednica = wymiary_czesci[0].strip() if len(wymiary_czesci) >= 1 else ''
             wysokosc = wymiary_czesci[1].strip() if len(wymiary_czesci) >= 2 else ''
+
+        elif wymiary.startswith('(L)'):
+            wymiary = wymiary[3:]
+            dlugosc = wymiary
 
         else:
             wymiary_czesci = wymiary.split('x')
@@ -84,6 +87,14 @@ def dodaj_atrybuty_wymiarow(offer):
             offer.insert(index + 2, atrybut_glebokosc)
             offer.insert(index + 3, atrybut_wysokosc)
 
+    elif dlugosc:
+        check_dlugosc = offer.find(".//property[@name='długość']")
+        if check_dlugosc is None:
+            atrybut_dlugosc = ET.Element("property", {"name": "długość"})
+            atrybut_dlugosc.text = dlugosc
+
+            index = list(offer).index(wymiary_element)
+            offer.insert(index + 1, atrybut_dlugosc)
 
 
 def dodaj_atrybuty_mocy_napiecia(offer):
@@ -113,6 +124,16 @@ def init_tkinter():
     root.silence_deprecation = True
     return root
 
+def select_files():
+    root = init_tkinter()
+    files = filedialog.askopenfilenames(filetypes=[("XML files", "*.xml")])
+    return files
+
+def select_export_folder():
+    root = init_tkinter()
+    folder = filedialog.askdirectory()
+    return folder
+
 def indent(elem, level=0):
     i = "\n" + level*"  "
     if len(elem):
@@ -129,33 +150,34 @@ def indent(elem, level=0):
             elem.tail = i
 
 def main():
-    init_tkinter()
+    files = select_files()
+    if not files:
+        messagebox.showinfo("Error", "No files selected")
+        return
 
-    if not os.path.exists(TO_IMPORT):
-        os.makedirs(TO_IMPORT)
+    export_folder = select_export_folder()
+    if not export_folder:
+        messagebox.showinfo("Error", "No export folder selected")
+        return
 
-    if not os.path.exists(TO_EXPORT):
-        os.makedirs(TO_EXPORT)
+    if not os.path.exists(export_folder):
+        os.makedirs(export_folder)
 
-    isDoneAnything = False
+    for file in files:
+        tree = ET.parse(file)
+        root = tree.getroot()
 
-    for file in os.listdir(TO_IMPORT):
-        if file.endswith('.xml'):
-            isDoneAnything = True
-            tree = ET.parse(os.path.join(TO_IMPORT, file))
-            root = tree.getroot()
+        for offer in root.findall('.//offer'):
+            dodaj_atrybuty_wymiarow(offer)
+            dodaj_atrybuty_mocy_napiecia(offer)
 
-            for offer in root.findall('.//offer'):
-                dodaj_atrybuty_wymiarow(offer)
-                dodaj_atrybuty_mocy_napiecia(offer)
+        indent(root)
 
-            indent(root)
-            tree.write(os.path.join(TO_EXPORT, file), encoding='utf-8', xml_declaration=True)
+        file_name = os.path.basename(file)
+        export_path = os.path.join(export_folder, file_name)
+        tree.write(export_path, encoding='utf-8', xml_declaration=True)
 
-    if isDoneAnything:
-        messagebox.showinfo("Success", "Done")
-    else:
-        messagebox.showinfo("Error", "Put .xml files in import_xml folder")
+    messagebox.showinfo("Success", "Conversion completed")
 
 if __name__ == '__main__':
     main()
