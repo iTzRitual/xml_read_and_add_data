@@ -1,14 +1,14 @@
 import xml.etree.ElementTree as ET
 import os
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 
 TO_EXPORT = 'export_xml'
 
 def dodaj_atrybuty_wymiarow(offer):
     wymiary_element = offer.find(".//property[@name='wymiary']")
 
-    szerokosc, glebokosc, wysokosc, srednica = None, None, None, None
+    szerokosc, glebokosc, wysokosc, srednica, dlugosc = None, None, None, None, None
 
     if wymiary_element is not None:
         wymiary = wymiary_element.text
@@ -45,11 +45,12 @@ def dodaj_atrybuty_wymiarow(offer):
             glebokosc = wymiary_czesci[1].strip() if len(wymiary_czesci) >= 2 else ''
             wysokosc = wymiary_czesci[2].strip() if len(wymiary_czesci) >= 3 else ''
 
-        if wysokosc.startswith('(H)'):
-            wysokosc = wysokosc[3:]
+        if dlugosc is None:
+            if wysokosc.startswith('(H)'):
+                wysokosc = wysokosc[3:]
 
-        if wysokosc.endswith('mm'):
-            wysokosc = wysokosc[:-2]
+            if wysokosc.endswith('mm'):
+                wysokosc = wysokosc[:-2]
 
     if srednica and wysokosc:
         check_srednica = offer.find(".//property[@name='szerokość']")
